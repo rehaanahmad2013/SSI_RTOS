@@ -1,5 +1,5 @@
 #pragma once
-
+#include "FreeRTOS.h"
 
 template <int stackSize>
 class Task {
@@ -10,8 +10,10 @@ class Task {
         uint8_t taskpriority;
 
     public:
-        Task(uint8_t priority, const char *name) {
+        Task(uint8_t priority) {
             taskpriority = priority; 
+
+            setTask(Task::TaskFunctionAdapter, this);
         }
 
         // A "virtual" function means it must be implemented by the child class
@@ -23,5 +25,11 @@ class Task {
         }
 
         void resume(void){
+        }
+
+        static void TaskFunctionAdapter(void* pvParameters)
+        {
+            Task *task = static_cast<Task *>(pvParameters);
+            task->activity();
         }
 };
