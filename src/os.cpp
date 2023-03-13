@@ -85,6 +85,13 @@ bool os_start(uint32_t systick_ticks)
 {
 	NVIC_SetPriority(PendSV_IRQn, 0xff); /* Lowest possible priority */
 	NVIC_SetPriority(SysTick_IRQn, 0x00); /* Highest possible priority */
+    /*
+     * this above line is linked to System.cpp's init() function. If you 
+     * look into init(), it sets up SysTick_Config(SystemCoreClock / 1000)
+     * that essentially calls the systick interrupt, thus the systick interrupt
+     * handler (that's already been defined by SSI), which effectively
+     * calls SysTickHook defined by Rehaan down below
+     */ 
 	Serial.println("os start");
 	taskStart = 1;
 	/* Start the SysTick timer: */
@@ -95,18 +102,18 @@ bool os_start(uint32_t systick_ticks)
 	/* Start the first task: */
 	os_curr_task = &m_task_table.tasks[m_task_table.current_task];
     os_curr_task->status = OS_TASK_STATUS_ACTIVE;
-	__set_PSP(os_curr_task->sp+64); /* Set PSP to the top of task's stack */
+	// __set_PSP(os_curr_task->sp+64); /* Set PSP to the top of task's stack */
 	__set_CONTROL(0x03); /* Switch to PSP, unprivilleged mode */
 	__ISB(); /* Exec. ISB after changing CONTORL (recommended) */
 
-	os_curr_task->handler();
+	// os_curr_task->handler();
 
 	return true;
 }
 
 
 extern "C" {
-	int sysTickHook(){
+	int sysTickHook(){ // where the actual context switching occurs
 		Serial.println("----");
 		Serial.println(taskStart);
 		Serial.println(tickcounter);
@@ -121,14 +128,14 @@ extern "C" {
 			/* Select next task: */
 			m_task_table.current_task++;
 			if (m_task_table.current_task >= m_task_table.size)
-				m_task_table.current_task = 0;
+				m_task_table.current_task = 1;
 
 			os_next_task = &m_task_table.tasks[m_task_table.current_task];
 			os_next_task->status = OS_TASK_STATUS_ACTIVE;
 			Serial.println("trigger context switch to");
 			Serial.println(m_task_table.current_task);
 			/* Trigger PendSV which performs the actual context switch: */
-			SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+			SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk; // triggers pendSV that creates context switch
 		}
 		return 0;
 	}

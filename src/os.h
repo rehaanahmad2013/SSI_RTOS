@@ -10,7 +10,7 @@
 
 typedef uint32_t os_stack_t;
 
-extern "C" void PendSV_Handler();
+// extern "C" void PendSV_Handler();
 
 void os_init(void);
 bool os_task_init(void (*handler)(void), os_stack_t *p_stack, uint32_t stack_size);
